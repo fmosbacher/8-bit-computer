@@ -19,7 +19,7 @@ import {
 } from './modules/micro-instructions.js';
 import { add, sub, jmp, jc, jz, out } from './modules/assembly-functions.js';
 
-const CLOCK_SPEED_HZ = 1 << 10;
+const CLOCK_SPEED_HZ = 1 << 3;
 
 let clockIsEnabled = true;
 let memory = [
@@ -38,7 +38,7 @@ let memory = [
   0x00,
   0x00,
   0x00,
-  0x01,
+  0x20,
 ];
 let address = 0x0;
 let instruction = 0x00;
@@ -99,6 +99,7 @@ function printControlWord() {
 function printInstruction() {
   const ops = [
     'NOP',
+    'LDA',
     'ADD',
     'SUB',
     'STA',
@@ -106,7 +107,6 @@ function printInstruction() {
     'JMP',
     'JC',
     'JZ',
-    '',
     '',
     '',
     '',
