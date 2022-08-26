@@ -1,169 +1,25 @@
-const CLOCK_SPEED_HZ = 4;
+import rom from './modules/rom.js';
+import {
+  HLT,
+  MI,
+  RI,
+  RO,
+  IO,
+  II,
+  AI,
+  AO,
+  EO,
+  SU,
+  BI,
+  OI,
+  CE,
+  CO,
+  J,
+  FI,
+} from './modules/micro-instructions.js';
+import { add, sub, jmp, jc, jz, out } from './modules/assembly-functions.js';
 
-const HLT = 1 << 15; // Halt clock
-const MI = 1 << 14; // Memory address register in
-const RI = 1 << 13; // RAM data in
-const RO = 1 << 12; // RAM data out
-const IO = 1 << 11; // Instruction register out
-const II = 1 << 10; // Instruction register in
-const AI = 1 << 9; // A register in
-const AO = 1 << 8; // A register out
-const EO = 1 << 7; // ALU out
-const SU = 1 << 6; // ALU subtract
-const BI = 1 << 5; // B register in
-const OI = 1 << 4; // Output register in
-const CE = 1 << 3; // Program counter enable
-const CO = 1 << 2; // Program counter out
-const J = 1 << 1; // Jump (program counter in)
-const FI = 1 << 0; // Flags in
-
-const CONTROL_WORD_MAP = [
-  [
-    // NOP
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // LDA
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | MI, IO | MI, IO | MI, IO | MI],
-    [RO | AI, RO | AI, RO | AI, RO | AI],
-    [0, 0, 0, 0],
-  ],
-  [
-    // ADD
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | MI, IO | MI, IO | MI, IO | MI],
-    [RO | BI, RO | BI, RO | BI, RO | BI],
-    [EO | AI | FI, EO | AI | FI, EO | AI | FI, EO | AI | FI],
-  ],
-  [
-    // SUB
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | MI, IO | MI, IO | MI, IO | MI],
-    [RO | BI, RO | BI, RO | BI, RO | BI],
-    [
-      EO | AI | FI | SU,
-      EO | AI | FI | SU,
-      EO | AI | FI | SU,
-      EO | AI | FI | SU,
-    ],
-  ],
-  [
-    // STA
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | MI, IO | MI, IO | MI, IO | MI],
-    [AO | RI, AO | RI, AO | RI, AO | RI],
-    [0, 0, 0, 0],
-  ],
-  [
-    // LDI
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | AI, IO | AI, IO | AI, IO | AI],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // JMP
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [IO | J, IO | J, IO | J, IO | J],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // JC
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, IO | J, IO | J],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // JZ
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, IO | J, 0, IO | J],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // -
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // -
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // -
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // -
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // -
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // OUT
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [AO | OI, AO | OI, AO | OI, AO | OI],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  [
-    // HLT
-    [CO | MI, CO | MI, CO | MI, CO | MI],
-    [RO | II | CE, RO | II | CE, RO | II | CE, RO | II | CE],
-    [HLT, HLT, HLT, HLT],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-];
-
-const nop = () => 0x00;
-const lda = (data) => 0x10 | data;
-const add = (data) => 0x20 | data;
-const sub = (data) => 0x30 | data;
-const sta = (data) => 0x40 | data;
-const ldi = (data) => 0x50 | data;
-const jmp = (data) => 0x60 | data;
-const jc = (data) => 0x70 | data;
-const jz = (data) => 0x80 | data;
-const out = () => 0xe0;
-const hlt = () => 0xf0;
+const CLOCK_SPEED_HZ = 1 << 10;
 
 let clockIsEnabled = true;
 let memory = [
@@ -194,26 +50,11 @@ let b = 0x00;
 let alu = 0x00;
 let display = 0x00;
 let dataBus = 0x00;
-let controlWord = CONTROL_WORD_MAP[0][0][0];
+let controlWord = rom[0][0][0];
 let clock = true;
 
 function sleep(durationInMs) {
   return new Promise((resolve) => setTimeout(resolve, durationInMs));
-}
-
-function pulseClock() {
-  console.log('Clock');
-}
-
-function printBin(n) {
-  let string = '';
-
-  for (let i = 8; i >= 0; i--) {
-    string += (n & (1 << i)) > 0 ? '1' : '0';
-    if (i === 8 || i === 4) string += ' ';
-  }
-
-  console.log(n, string);
 }
 
 function subBin(a, b) {
@@ -314,7 +155,7 @@ async function runCpu() {
     clock = false;
     step = (step + 1) % 5;
     const opCode = instruction >> 4;
-    controlWord = CONTROL_WORD_MAP[opCode][step][flags];
+    controlWord = rom[opCode][step][flags];
 
     await sleep(1000 / CLOCK_SPEED_HZ / 2);
   }
@@ -348,7 +189,7 @@ function draw() {
   textFont('monospace');
   textSize(24);
   fill(white);
-  text('Clock', 15, 20);
+  text('Clock at ' + CLOCK_SPEED_HZ + 'Hz', 15, 20);
   fill(clock ? blue : gray);
   circle(25, 40, 20);
 
@@ -373,6 +214,7 @@ function draw() {
   drawBits(4, instruction >> 4, blue, 0, 360);
   drawBits(4, instruction & 0x0f, yellow, 100, 360);
 
+  // Divider
   stroke(gray);
   line(315, 20, 315, 400);
   noStroke();
@@ -382,6 +224,7 @@ function draw() {
   text('Data Bus ' + dataBus, 355, 20);
   drawBits(8, dataBus, red, 340, 40);
 
+  // Divider
   stroke(gray);
   line(590, 20, 590, 550);
   noStroke();
@@ -393,7 +236,7 @@ function draw() {
 
   // Flags
   fill(white);
-  text(`Flags ${flags >> 1} ${flags & 0x1}`, 630, 100);
+  text(`Flags CF: ${flags >> 1} and ZF: ${flags & 0x1}`, 630, 100);
   drawBits(2, flags, green, 615, 120);
 
   // A
@@ -427,3 +270,6 @@ function draw() {
   fill(white);
   text(printControlWord(), 630, 540);
 }
+
+window.setup = setup;
+window.draw = draw;

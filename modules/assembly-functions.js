@@ -1,0 +1,11 @@
+export const nop = () => 0x00;
+export const lda = (data) => 0x10 | data;
+export const add = (data) => 0x20 | data;
+export const sub = (data) => 0x30 | data;
+export const sta = (data) => 0x40 | data;
+export const ldi = (data) => 0x50 | data;
+export const jmp = (data) => 0x60 | data;
+export const jc = (data) => 0x70 | data;
+export const jz = (data) => 0x80 | data;
+export const out = () => 0xe0;
+export const hlt = () => 0xf0;

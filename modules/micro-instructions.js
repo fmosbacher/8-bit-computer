@@ -1,0 +1,16 @@
+export const HLT = 1 << 15; // Halt clock
+export const MI = 1 << 14; // Memory address register in
+export const RI = 1 << 13; // RAM data in
+export const RO = 1 << 12; // RAM data out
+export const IO = 1 << 11; // Instruction register out
+export const II = 1 << 10; // Instruction register in
+export const AI = 1 << 9; // A register in
+export const AO = 1 << 8; // A register out
+export const EO = 1 << 7; // ALU out
+export const SU = 1 << 6; // ALU subtract
+export const BI = 1 << 5; // B register in
+export const OI = 1 << 4; // Output register in
+export const CE = 1 << 3; // Program counter enable
+export const CO = 1 << 2; // Program counter out
+export const J = 1 << 1; // Jump (program counter in)
+export const FI = 1 << 0; // Flags in
